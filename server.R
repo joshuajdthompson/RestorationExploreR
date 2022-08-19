@@ -1,6 +1,6 @@
 ################################################################################
 #                   Author: Joshua Thompson
-#   O__  ----       Email:  pwthom19@aacounty.org
+#   O__  ----       Email:  joshuajamesdavidthompson@gmail.com
 #  c/ /'_ ---
 # (*) \(*) --
 # ======================== Script  Information =================================
@@ -22,24 +22,104 @@
 #==========================================================================================
 
 
-library(shiny)
-library(leaflet)
-library(sf)
-library(sp)
-library(dplyr)
-library(DT)
-library(geojsonsf)
-library(rmapshaper)
-library(shinycssloaders)
-library(shinyjs)
-library(shinythemes)
-library(Cairo)
-library(tidyverse)
-library(leaflet.extras)
-library(tinytex)
-library(rmarkdown)
-library(webshot)
-library(waiter)
+
+if(!require(shiny)){
+  install.packages("shiny")
+  library(shiny) #'*1.7.1* <---  shiny version
+}
+
+if(!require(leaflet)){
+  install.packages("leaflet")
+  library(leaflet) #'*2.1.1* <---  leaflet version
+}
+
+if(!require(sf)){
+  install.packages("sf")
+  library(sf) #'*1.0.7* <---  sf version # 
+}
+
+if(!require(sp)){
+  install.packages("sp")
+  library(sp) #'*1.4.7* <---  sp version #
+}
+
+if(!require(dplyr)){
+  install.packages("dplyr")
+  library(dplyr) #'*1.0.8* <---  dplyr version # 
+}
+
+if(!require(DT)){
+  install.packages("DT")
+  library(DT) #'*0.22* <---  DT version # 
+}
+
+if(!require(geojsonsf)){
+  install.packages("geojsonsf")
+  library(geojsonsf) #'*2.0.2* <---  geojsonsf version # 
+}
+
+if(!require(rmapshaper)){
+  install.packages("rmapshaper")
+  library(rmapshaper) #'*0.4.5* <---  rmapshaper version # 
+}
+
+if(!require(shinycssloaders)){
+  install.packages("shinycssloaders")
+  library(shinycssloaders) #'*1.0.0* <---  shinycssloaders version # 
+}
+
+if(!require(shinyjs)){
+  install.packages("shinyjs")
+  library(shinyjs) #'*2.1.0* <---  shinyjs version #
+}
+
+if(!require(shinythemes)){
+  install.packages("shinythemes")
+  library(shinythemes) #'*1.2.0* <---  shinythemes version #
+}
+
+if(!require(Cairo)){
+  install.packages("Cairo")
+  library(Cairo) #'*1.5.15* <---  Cairo version # 
+}
+
+if(!require(tidyverse)){
+  install.packages("tidyverse")
+  library(tidyverse) #'*1.3.1* <---  tidyverse version # 
+}
+
+if(!require(leaflet.extras)){
+  install.packages("leaflet.extras")
+  library(leaflet.extras) #'*1.0.0* <---  leaflet.extras version #
+}
+
+if(!require(tinytex)){
+  install.packages("tinytex")
+  library(tinytex) #'*0.37* <---  tinytex version # 
+}
+
+#tinytex::install_tinytex() make sure this is installed!
+
+if(!require(rmarkdown)){
+  install.packages("rmarkdown")
+  library(rmarkdown) #'*2.13* <---  rmarkdown version # 
+}
+
+if(!require(waiter)){
+  install.packages("waiter")
+  library(waiter) #'*0.2.5* <---  waiter version # 
+}
+
+if(!require(gfonts)){
+  install.packages("gfonts")
+  library(gfonts) #'*0.1.3* <---  gfonts version # 
+}
+
+if(!require(RColorBrewer)){
+  install.packages("RColorBrewer")
+  library(RColorBrewer) #'*1.1.2* <---  RColorBrewer version # 
+}
+
 
 # load data
 load("stre_simp.RData")
@@ -67,60 +147,83 @@ ftw_simp <- merge(ftw_simp,ftwsegs,all.x=TRUE,by.x="SiteID.ftw",by.y="SiteID")
 ftw_simp$OwnerNames <- ifelse(ftw_simp$OwnerNames=="NA","UNKNOWN", ftw_simp$OwnerNames)
 
 
-
 server <- function(input, output, session){
-
+  
+  hostess <- Hostess$new("loader")
+  
+  Sys.sleep(1)
+  
+  for(i in 1:10){
+    Sys.sleep(runif(1) / 2)
+    hostess$set(i * 10)
+  }
+  waiter_hide()
+  
   options(shiny.usecairo=T)
-
+  
   #create empty vector to hold all the clicks
   selected_ids <- reactiveValues(ids = vector())
-
+  
   observeEvent(input$refresh, { # refresh app - for restart
     session$reload()
   })
-
-  #s tream restoration map output
+  
+  #stream restoration map output
+  stre.bins <- c(0, 5, 10, 20, 40, 60, 100, 150, 200)
+  stre.pal <- colorBin("Reds", domain = stre_simp$STRE_EIA, bins = stre.bins)
+  print(stre.pal)
+  
   output$map <- renderLeaflet({
     leaflet() %>%
+      setView(lng = -76.56, lat = 38.97, zoom = 13) %>%
       addProviderTiles(providers$Stamen.TonerLite,
                        options = providerTileOptions(noWrap = TRUE), group = "Stamen Base Map")%>%
       addProviderTiles(providers$Esri.WorldImagery, group = "Esri Imagery") %>%
       addPolygons(data = stre_simp,
-                  fillColor = "grey",
+                  fillColor = ~stre.pal(STRE_EIA),
                   fillOpacity = 1,
-                  color = "blue",
+                  color = "black",
                   stroke = TRUE,
-                  weight = 2,
+                  weight = 1,
                   layerId = ~SiteID,
                   group = "segs",
                   label = ~SiteID,
-                  highlightOptions = highlightOptions(color = "hotpink",
+                  highlightOptions = highlightOptions(color = "black",
                                                       opacity = 1.0,
-                                                      weight = 2,
-                                                      bringToFront = FALSE)) %>%
+                                                      weight = 3,
+                                                      bringToFront = TRUE)) %>%
       addPolygons(data = stre_simp,
-                  fillColor = "red",
+                  fillColor = "black",
                   fillOpacity = 1,
                   weight = 1,
                   color = "black",
                   stroke = TRUE,
                   layerId = ~SiteID_2,
                   group = ~SiteID) %>%
-      hideGroup(group = stre_simp$SiteID) %>%
+      hideGroup(group = stre_simp$SiteID)%>%
+      addMiniMap(
+        tiles = providers$Stamen.TonerLite,
+        position = 'topright', 
+        width = 200, height = 200,
+        toggleDisplay = FALSE,
+        aimingRectOptions = list(color = "red", weight = 1, clickable = FALSE),
+        zoomLevelOffset=-5) %>%
       addLayersControl(baseGroups = c("Stamen Base Map","Esri Imagery"),
-                       options = layersControlOptions(collapsed = FALSE))
-
-
-
-
+                       options = layersControlOptions(collapsed = FALSE)) %>% 
+      addLegend(pal = stre.pal, values = stre_simp$STRE_EIA, opacity = 0.7, title =  "Stream EIA (ac)",
+                position = "bottomleft")
+    
+    
+    
+    
   })
-
+  
   #define leaflet proxy selections
   proxy <- leafletProxy("map")
-
+  
   #create empty vector to hold all the clicks
   selected <- reactiveValues(groups = vector())
-
+  
   observeEvent(input$map_shape_click, {
     if(input$map_shape_click$group == "segs"){
       selected$groups <- c(selected$groups, input$map_shape_click$id)
@@ -135,24 +238,24 @@ server <- function(input, output, session){
                          choices = stre_simp$SiteID,
                          selected = selected$groups)
   })
-
-
-
+  
+  
+  
   observeEvent(input$selected_locations, {
     removed_via_selectInput <- setdiff(selected$groups, input$selected_locations)
     added_via_selectInput <- setdiff(input$selected_locations, selected$groups)
-
+    
     if(length(removed_via_selectInput) > 0){
       selected$groups <- input$selected_locations
       proxy %>% hideGroup(group = removed_via_selectInput)
     }
-
+    
     if(length(added_via_selectInput) > 0){
       selected$groups <- input$selected_locations
       proxy %>% showGroup(group = added_via_selectInput)
     }
   }, ignoreNULL = FALSE)
-
+  
   selectedLocations <- reactive({
     selectedLocations <- subset(stre_simp, SiteID %in% input$selected_locations)
     selectedLocations <- data.frame("STRE_TN" = round(sum(selectedLocations$STRE_TN),1),
@@ -160,9 +263,9 @@ server <- function(input, output, session){
                                     "STRE_TSS" = round(sum(selectedLocations$STRE_TSS)/2000,1),
                                     "STRE_EIA" = round(sum(selectedLocations$STRE_EIA),1))
     selectedLocations
-
+    
   })
-
+  
   streamtable <- reactive({subset(stre_simp, SiteID %in% input$selected_locations)%>%
       mutate(STRE_TN =   round(STRE_TN,1),
              STRE_TP =  round(STRE_TP,1),
@@ -171,9 +274,9 @@ server <- function(input, output, session){
       select(c(SiteID,TaxAccountIDs,OwnerNames,NumOwners,STRE_TN,STRE_TP,STRE_TSS,STRE_EIA))%>%
       st_drop_geometry()%>%
       remove_rownames()})
-
-
-
+  
+  
+  
   output$mytable <- renderDataTable({
     datatable(subset(stre_simp, SiteID %in% input$selected_locations)%>%
                 mutate(STRE_TN =   round(STRE_TN,1),
@@ -183,8 +286,8 @@ server <- function(input, output, session){
                 select(c(SiteID,OwnerNames,NumOwners,STRE_TN,STRE_TP,STRE_TSS,STRE_EIA))%>%
                 st_drop_geometry(),colnames = c('Site ID','Owners','Number of Owners','Stream Total N (lbs)', 'Stream Total P (lbs)', 'Stream TSS (tons)', 'Stream EIA (ac)'),rownames = FALSE,options = list(searching = FALSE))
   })
-
-
+  
+  
   #========================================================================#
   #========================================================================#
   #========================================================================#
@@ -192,48 +295,62 @@ server <- function(input, output, session){
   #========================================================================#
   #========================================================================#
   #========================================================================#
-
+  
   #create empty vector to hold all click the riparian clicks
   selected_ids.rip <- reactiveValues(ids = vector())
-
+  
   # riparian map output
+  rip.bins <- c(0, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10)
+  rip.pal <- colorBin("Reds", domain = rip_simp$RipAcres, bins = rip.bins)
+  print(rip.pal)
+  
   output$maprip <- renderLeaflet({
     leaflet() %>%
+      setView(lng = -76.56, lat = 38.97, zoom = 13) %>%
       addProviderTiles(providers$Stamen.TonerLite,
                        options = providerTileOptions(noWrap = TRUE), group = "Stamen Base Map")%>%
       addProviderTiles(providers$Esri.WorldImagery, group = "Esri Imagery") %>%
       addPolygons(data = rip_simp,
-                  fillColor = "grey",
+                  fillColor = ~rip.pal(RipAcres),
                   fillOpacity = 1,
-                  color = "blue",
+                  color = "black",
                   stroke = TRUE,
-                  weight = 2,
+                  weight = 1,
                   layerId = ~SiteID.rip,
                   group = "segs.rip",
                   label = ~SiteID.rip,
-                  highlightOptions = highlightOptions(color = "hotpink",
+                  highlightOptions = highlightOptions(color = "black",
                                                       opacity = 1.0,
-                                                      weight = 2,
-                                                      bringToFront = FALSE)) %>%
+                                                      weight = 3,
+                                                      bringToFront = TRUE)) %>%
       addPolygons(data = rip_simp,
-                  fillColor = "red",
+                  fillColor = "black",
                   fillOpacity = 1,
                   weight = 1,
                   color = "black",
                   stroke = TRUE,
                   layerId = ~SiteID_2.rip,
                   group = ~SiteID.rip) %>%
-      hideGroup(group = rip_simp$SiteID.rip) %>%
+      hideGroup(group = rip_simp$SiteID.rip)%>%
+      addMiniMap(
+        tiles = providers$Stamen.TonerLite,
+        position = 'topright', 
+        width = 200, height = 200,
+        toggleDisplay = FALSE,
+        aimingRectOptions = list(color = "red", weight = 1, clickable = FALSE),
+        zoomLevelOffset=-5) %>%
       addLayersControl(baseGroups = c("Stamen Base Map","Esri Imagery"),
-                       options = layersControlOptions(collapsed = FALSE))
+                       options = layersControlOptions(collapsed = FALSE))%>% 
+      addLegend(pal = rip.pal, values = rip_simp$RipAcres, opacity = 0.7, title =  "Riparian Area (ac)",
+                position = "bottomleft")
   })
-
+  
   #define leaflet proxy for riparian map
   proxyrip <- leafletProxy("maprip")
-
+  
   #create empty vector to hold all the riparian clicks
   selected.rip <- reactiveValues(groups = vector())
-
+  
   observeEvent(input$maprip_shape_click, {
     if(input$maprip_shape_click$group == "segs.rip"){
       selected.rip$groups <- c(selected.rip$groups, input$maprip_shape_click$id)
@@ -248,57 +365,57 @@ server <- function(input, output, session){
                          choices = rip_simp$SiteID.rip,
                          selected = selected.rip$groups)
   })
-
-
-
+  
+  
+  
   observeEvent(input$selected.rip_locations, {
     removed_via_selectInput.rip <- setdiff(selected.rip$groups, input$selected.rip_locations)
     added_via_selectInput.rip <- setdiff(input$selected.rip_locations, selected.rip$groups)
-
+    
     if(length(removed_via_selectInput.rip) > 0){
       selected.rip$groups <- input$selected.rip_locations
       proxyrip %>% hideGroup(group = removed_via_selectInput.rip)
     }
-
+    
     if(length(added_via_selectInput.rip) > 0){
       selected.rip$groups <- input$selected.rip_locations
       proxyrip %>% showGroup(group = added_via_selectInput.rip)
     }
   }, ignoreNULL = FALSE)
-
+  
   selected.ripLocations <- reactive({
     selected.ripLocations <- subset(rip_simp, SiteID.rip %in% input$selected.rip_locations)
-
+    
     if(input$CL==0){ #Riparian Forest Buffer selection
-
+      
       selected.ripLocations$LC_TN <-  ifelse(!is.na(selected.ripLocations$TransmissionLine),0,selected.ripLocations$RipAcres*14.34)
       selected.ripLocations$LC_TP <-  ifelse(!is.na(selected.ripLocations$TransmissionLine),0,selected.ripLocations$RipAcres*2.5)
       selected.ripLocations$LC_TSS <- ifelse(!is.na(selected.ripLocations$TransmissionLine),0,selected.ripLocations$RipAcres*4411)
       selected.ripLocations$LC_EIA <- ifelse(!is.na(selected.ripLocations$TransmissionLine),0,selected.ripLocations$RipAcres*1.5)
-
+      
       selected.ripLocations <- data.frame("LC_TN" = round(sum(selected.ripLocations$LC_TN),1),
                                           "LC_TP" = round(sum(selected.ripLocations$LC_TP),1),
                                           "LC_TSS" = round(sum(selected.ripLocations$LC_TSS)/2000,1),
                                           "LC_EIA" = round(sum(selected.ripLocations$LC_EIA),1))
-
+      
     } else if(input$CL==1){ #Riparian Conservation Landscaping selection
-
+      
       selected.ripLocations$LC_TN <- selected.ripLocations$RipAcres*6.75
       selected.ripLocations$LC_TP <- selected.ripLocations$RipAcres*0.74
       selected.ripLocations$LC_TSS <- 0
       selected.ripLocations$LC_EIA <- selected.ripLocations$RipAcres*0.5
-
+      
       selected.ripLocations <- data.frame("LC_TN" = round(sum(selected.ripLocations$LC_TN),1),
                                           "LC_TP" = round(sum(selected.ripLocations$LC_TP),1),
                                           "LC_TSS" = round(sum(selected.ripLocations$LC_TSS)/2000,1),
                                           "LC_EIA" = round(sum(selected.ripLocations$LC_EIA),1))
-
+      
     }
-
+    
     selected.ripLocations
-
+    
   })
-
+  
   riptable <- reactive({
     if(input$CL==0){
       subset(rip_simp, SiteID.rip %in% input$selected.rip_locations)%>%
@@ -330,7 +447,7 @@ server <- function(input, output, session){
         remove_rownames()
     }
   })
-
+  
   output$mytable.rip <- renderDataTable({
     datatable(if(input$CL==0){
       subset(rip_simp, SiteID.rip %in% input$selected.rip_locations)%>%
@@ -361,7 +478,7 @@ server <- function(input, output, session){
     },colnames = c('Site ID','Land Type','Acres', 'Owners','Number of Owners','Riparian Planting Total N (lbs)', 'Riparian Planting Total P (lbs)','Riparian Planting TSS (tons)', 'Riparian Planting EIA (ac)'),
     rownames = FALSE,options = list(searching = FALSE))
   })
-
+  
   #========================================================================#
   #========================================================================#
   #========================================================================#
@@ -369,49 +486,63 @@ server <- function(input, output, session){
   #========================================================================#
   #========================================================================#
   #========================================================================#
-
+  
   #create empty vector to hold all the clicks
   selected_ids.shore <- reactiveValues(ids = vector())
-
+  
   # shoreline map output
+  
+  shore.bins <- c(0, 20, 30, 40, 50, 60, 70, 80, 90)
+  shore.pal <- colorBin("Reds", domain = shore_simp$SHST_EIA, bins = shore.bins)
+  print(shore.pal)
+  
   output$mapshore <- renderLeaflet({
     leaflet() %>%
-
+      setView(lng = -76.56, lat = 38.97, zoom = 13) %>%
       addProviderTiles(providers$Stamen.TonerLite,
                        options = providerTileOptions(noWrap = TRUE), group = "Stamen Base Map")%>%
       addProviderTiles(providers$Esri.WorldImagery, group = "Esri Imagery") %>%
       addPolygons(data = shore_simp,
-                  fillColor = "grey",
+                  fillColor = ~shore.pal(SHST_EIA),
                   fillOpacity = 1,
-                  color = "blue",
+                  color = "black",
                   stroke = TRUE,
-                  weight = 2,
+                  weight = 1,
                   layerId = ~SiteID.shore,
                   group = "segs.shore",
                   label = ~SiteID.shore,
-                  highlightOptions = highlightOptions(color = "hotpink",
+                  highlightOptions = highlightOptions(color = "black",
                                                       opacity = 1.0,
-                                                      weight = 2,
-                                                      bringToFront = FALSE)) %>%
+                                                      weight = 3,
+                                                      bringToFront = TRUE)) %>%
       addPolygons(data = shore_simp,
-                  fillColor = "red",
+                  fillColor = "black",
                   fillOpacity = 1,
                   weight = 1,
                   color = "black",
                   stroke = TRUE,
                   layerId = ~SiteID_2.shore,
                   group = ~SiteID.shore) %>%
-      hideGroup(group = shore_simp$SiteID.shore) %>%
+      hideGroup(group = shore_simp$SiteID.shore)%>%
+      addMiniMap(
+        tiles = providers$Stamen.TonerLite,
+        position = 'topright', 
+        width = 200, height = 200,
+        toggleDisplay = FALSE,
+        aimingRectOptions = list(color = "red", weight = 1, clickable = FALSE),
+        zoomLevelOffset=-5) %>%
       addLayersControl(baseGroups = c("Stamen Base Map","Esri Imagery"),
-                       options = layersControlOptions(collapsed = FALSE))
+                       options = layersControlOptions(collapsed = FALSE))%>% 
+      addLegend(pal = shore.pal, values = shore_simp$SHST_EIA, opacity = 0.7, title =  "Shoreline EIA (ac)",
+                position = "bottomleft")
   })
-
+  
   #define leaflet proxy for mapshore
   proxyshore <- leafletProxy("mapshore")
-
+  
   #create empty vector to hold all the clicks
   selected.shore <- reactiveValues(groups = vector())
-
+  
   observeEvent(input$mapshore_shape_click, {
     if(input$mapshore_shape_click$group == "segs.shore"){
       selected.shore$groups <- c(selected.shore$groups, input$mapshore_shape_click$id)
@@ -426,35 +557,35 @@ server <- function(input, output, session){
                          choices = shore_simp$SiteID.shore,
                          selected = selected.shore$groups)
   })
-
-
-
+  
+  
+  
   observeEvent(input$selected.shore_locations, {
     removed_via_selectInput.shore <- setdiff(selected.shore$groups, input$selected.shore_locations)
     added_via_selectInput.shore <- setdiff(input$selected.shore_locations, selected.shore$groups)
-
+    
     if(length(removed_via_selectInput.shore) > 0){
       selected.shore$groups <- input$selected.shore_locations
       proxyshore %>% hideGroup(group = removed_via_selectInput.shore)
     }
-
+    
     if(length(added_via_selectInput.shore) > 0){
       selected.shore$groups <- input$selected.shore_locations
       proxyshore %>% showGroup(group = added_via_selectInput.shore)
     }
   }, ignoreNULL = FALSE)
-
+  
   selected.shoreLocations <- reactive({
     selected.shoreLocations <- subset(shore_simp, SiteID.shore %in% input$selected.shore_locations)
-
+    
     selected.shoreLocations <- data.frame("SHST_TN" = round(sum(selected.shoreLocations$SHST_TN),1),
                                           "SHST_TP" = round(sum(selected.shoreLocations$SHST_TP),1),
                                           "SHST_TSS" = round(sum(selected.shoreLocations$SHST_TSS)/2000,1),
                                           "SHST_EIA" = round(sum(selected.shoreLocations$SHST_EIA),1))
     selected.shoreLocations
-
+    
   })
-
+  
   shoretable <- reactive({subset(shore_simp, SiteID.shore %in% input$selected.shore_locations)%>%
       mutate(SHST_TN =   round(SHST_TN,1),
              SHST_TP =  round(SHST_TP,1),
@@ -463,9 +594,9 @@ server <- function(input, output, session){
       select(c(SiteID.shore,TaxAccountIDs,OwnerNames,NumOwners,SHST_TN,SHST_TP,SHST_TSS,SHST_EIA))%>%
       st_drop_geometry()%>%
       remove_rownames()})
-
+  
   output$mytable.shore <- renderDataTable({
-
+    
     datatable(subset(shore_simp, SiteID.shore %in% input$selected.shore_locations)%>%
                 mutate(SHST_TN =   round(SHST_TN,1),
                        SHST_TP =  round(SHST_TP,1),
@@ -475,9 +606,9 @@ server <- function(input, output, session){
                 st_drop_geometry(),colnames = c('Site ID', 'Owners','Number of Owners','Shoreline Total N (lbs)', 'Shoreline Total P (lbs)', 'Shoreline TSS (tons)',
                                                 'Shoreline EIA (ac)'),
               rownames = FALSE,options = list(searching = FALSE))
-
+    
   })
-
+  
   #========================================================================#
   #========================================================================#
   #========================================================================#
@@ -485,13 +616,18 @@ server <- function(input, output, session){
   #========================================================================#
   #========================================================================#
   #========================================================================#
-
+  
   #create empty vector to hold all the clicks
   selected_ids.retro <- reactiveValues(ids = vector())
-
+  
   # base map
+  retro.bins <- c(0, 5, 10, 20, 40, 80, 150, 250, 350)
+  retro.pal <- colorBin("Reds", domain = retrobmps$RETRO_EIA, bins = retro.bins)
+  print(retro.pal)
+  
   output$mapretro <- renderLeaflet({
     leaflet() %>%
+      setView(lng = -76.56, lat = 38.97, zoom = 13) %>%
       addProviderTiles(providers$Stamen.TonerLite,
                        options = providerTileOptions(noWrap = TRUE), group = "Stamen Base Map")%>%
       addProviderTiles(providers$Esri.WorldImagery, group = "Esri Imagery") %>%
@@ -499,10 +635,10 @@ server <- function(input, output, session){
                  radius = 50,
                  lat = retrobmps$Latitude,
                  lng = retrobmps$Longitude,
-                 fillColor = "grey",
+                 fillColor = ~retro.pal(RETRO_EIA),
                  fillOpacity = 1,
-                 color = "blue",
-                 weight = 2,
+                 color = "black",
+                 weight = 1,
                  stroke = T,
                  layerId = ~SiteID.retro,
                  group = "segs.retro",
@@ -515,7 +651,7 @@ server <- function(input, output, session){
                  radius = 50,
                  lat = ~Latitude,
                  lng = ~Longitude,
-                 fillColor = "red",
+                 fillColor = "black",
                  fillOpacity = 1,
                  color = "black",
                  weight = 1,
@@ -523,21 +659,30 @@ server <- function(input, output, session){
                  group = ~SiteID.retro,
                  layerId = ~secondSiteID.retro,
                  label = ~SiteID.retro,
-                 highlightOptions = highlightOptions(color = "hotpink",
+                 highlightOptions = highlightOptions(color = "black",
                                                      opacity = 1.0,
-                                                     weight = 2,
-                                                     bringToFront = FALSE)) %>%
+                                                     weight = 3,
+                                                     bringToFront = TRUE)) %>%
       hideGroup(group = retrobmps$SiteID.retro)%>%
+      addMiniMap(
+        tiles = providers$Stamen.TonerLite,
+        position = 'topright', 
+        width = 200, height = 200,
+        toggleDisplay = FALSE,
+        aimingRectOptions = list(color = "red", weight = 1, clickable = FALSE),
+        zoomLevelOffset=-5)%>%
       addLayersControl(baseGroups = c("Stamen Base Map","Esri Imagery"),
-                       options = layersControlOptions(collapsed = FALSE))
+                       options = layersControlOptions(collapsed = FALSE))%>% 
+      addLegend(pal = retro.pal, values = retrobmps$RETRO_EIA, opacity = 0.7, title =  "Retrofit EIA (ac)",
+                position = "bottomleft")
   })
-
+  
   #define leaflet proxy for mapretro
   proxyretro <- leafletProxy("mapretro")
-
+  
   #create empty vector to hold all the clicks
   selected.retro <- reactiveValues(groups = vector())
-
+  
   observeEvent(input$mapretro_shape_click, {
     if(input$mapretro_shape_click$group == "segs.retro"){
       selected.retro$groups <- c(selected.retro$groups, input$mapretro_shape_click$id)
@@ -552,25 +697,25 @@ server <- function(input, output, session){
                          choices = retrobmps$SiteID.retro,
                          selected = selected.retro$groups)
   })
-
-
-
+  
+  
+  
   observeEvent(input$selected.retro_locations, {
     removed_via_selectInput.retro <- setdiff(selected.retro$groups, input$selected.retro_locations)
     added_via_selectInput.retro <- setdiff(input$selected.retro_locations, selected.retro$groups)
-
+    
     if(length(removed_via_selectInput.retro) > 0){
       selected.retro$groups <- input$selected.retro_locations
       proxyretro %>% hideGroup(group = removed_via_selectInput.retro)
     }
-
+    
     if(length(added_via_selectInput.retro) > 0){
       selected.retro$groups <- input$selected.retro_locations
       proxyretro %>% showGroup(group = added_via_selectInput.retro)
     }
   }, ignoreNULL = FALSE)
-
-
+  
+  
   selectedLocations.retro <- reactive({
     selectedLocations.retro <- subset(retrobmps, SiteID.retro %in% input$selected.retro_locations)%>%
       mutate(ImperviousPercent = round((IMP_ACRES/BMP_DRAIN_AREA)*100,1),
@@ -591,15 +736,15 @@ server <- function(input, output, session){
       remove_rownames()
     selectedLocations.retro
   })
-
-
-
+  
+  
+  
   output$mytable.retro <- renderDataTable({
     datatable(selectedLocations.retro()%>%select(-c(TaxAccountIDs)),colnames = c('Site ID', 'BMP Type', 'BMP Drainage Area (ac)', 'Impervious Area in Drainage Area (%)',
                                                                                  'Owners','Number of Owners','Total N Reduction (lbs)', 'Total P Reduction (lbs)', 'TSS Reduction (tons)', 'Impervious Credit (ac)'),rownames = FALSE)
   })
-
-
+  
+  
   #========================================================================#
   #========================================================================#
   #========================================================================#
@@ -607,31 +752,36 @@ server <- function(input, output, session){
   #========================================================================#
   #========================================================================#
   #========================================================================#
-
+  
   #create empty vector to hold all the clicks
   selected_ids.ftw <- reactiveValues(ids = vector())
-
+  
   #  mapftw output
+  ftw.bins <- c(0, 5, 10, 20, 40, 80, 120, 150, 220)
+  ftw.pal <- colorBin("Reds", domain = ftw_simp$ImperviousArea, bins = ftw.bins)
+  print(ftw.pal)
+  
   output$mapftw <- renderLeaflet({
     leaflet() %>%
+      setView(lng = -76.56, lat = 38.97, zoom = 13) %>%
       addProviderTiles(providers$Stamen.TonerLite,
                        options = providerTileOptions(noWrap = TRUE), group = "Stamen Base Map")%>%
       addProviderTiles(providers$Esri.WorldImagery, group = "Esri Imagery") %>%
       addPolygons(data = ftw_simp,
-                  fillColor = "grey",
+                  fillColor = ~ftw.pal(ImperviousArea),
                   fillOpacity = 1,
-                  color = "blue",
+                  color = "black",
                   stroke = TRUE,
-                  weight = 2,
+                  weight = 1,
                   layerId = ~SiteID.ftw,
                   group = "segs.ftw",
                   label = ~SiteID.ftw,
-                  highlightOptions = highlightOptions(color = "hotpink",
+                  highlightOptions = highlightOptions(color = "black",
                                                       opacity = 1.0,
-                                                      weight = 2,
-                                                      bringToFront = FALSE)) %>%
+                                                      weight = 3,
+                                                      bringToFront = TRUE)) %>%
       addPolygons(data = ftw_simp,
-                  fillColor = "red",
+                  fillColor = "black",
                   fillOpacity = 1,
                   weight = 1,
                   color = "black",
@@ -639,16 +789,25 @@ server <- function(input, output, session){
                   layerId = ~SiteID_2.ftw,
                   group = ~SiteID.ftw) %>%
       hideGroup(group = ftw_simp$SiteID.ftw)%>%
+      addMiniMap(
+        tiles = providers$Stamen.TonerLite,
+        position = 'topright', 
+        width = 200, height = 200,
+        toggleDisplay = FALSE,
+        aimingRectOptions = list(color = "red", weight = 1, clickable = FALSE),
+        zoomLevelOffset=-5)%>%
       addLayersControl(baseGroups = c("Stamen Base Map","Esri Imagery"),
-                       options = layersControlOptions(collapsed = FALSE))
+                       options = layersControlOptions(collapsed = FALSE))%>% 
+      addLegend(pal = ftw.pal, values =ftw_simp$ImperviousArea, opacity = 0.7, title =  "Impervious Area Draining to Pond (ac)",
+                position = "bottomleft")
   })
-
+  
   #define leaflet proxy for mapftw
   proxyftw <- leafletProxy("mapftw")
-
+  
   #create empty vector to hold all the clicks
   selected.ftw <- reactiveValues(groups = vector())
-
+  
   observeEvent(input$mapftw_shape_click, {
     if(input$mapftw_shape_click$group == "segs.ftw"){
       selected.ftw$groups <- c(selected.ftw$groups, input$mapftw_shape_click$id)
@@ -663,25 +822,25 @@ server <- function(input, output, session){
                          choices = ftw_simp$SiteID.ftw,
                          selected = selected.ftw$groups)
   })
-
-
-
+  
+  
+  
   observeEvent(input$selected.ftw_locations, {
     removed_via_selectInput.ftw <- setdiff(selected.ftw$groups, input$selected.ftw_locations)
     added_via_selectInput.ftw <- setdiff(input$selected.ftw_locations, selected.ftw$groups)
-
+    
     if(length(removed_via_selectInput.ftw) > 0){
       selected.ftw$groups <- input$selected.ftw_locations
       proxyftw %>% hideGroup(group = removed_via_selectInput.ftw)
     }
-
+    
     if(length(added_via_selectInput.ftw) > 0){
       selected.ftw$groups <- input$selected.ftw_locations
       proxyftw %>% showGroup(group = added_via_selectInput.ftw)
     }
   }, ignoreNULL = FALSE)
-
-
+  
+  
   selected.ftwLocations<- reactive({
     selected.ftwLocations <- subset(ftw_simp, SiteID.ftw %in% input$selected.ftw_locations)
     if(input$FTWcover == 0){
@@ -710,16 +869,16 @@ server <- function(input, output, session){
       selected.ftwLocations$FTW_TSS <- round(selected.ftwLocations$ImperviousArea*369,1)
       selected.ftwLocations$FTW_EIA <- round(selected.ftwLocations$ImperviousArea*0.042,1)
     }
-
+    
     selected.ftwLocations <- data.frame("FTW_TN" = round(sum(selected.ftwLocations$FTW_TN),1),
                                         "FTW_TP" = round(sum(selected.ftwLocations$FTW_TP),1),
                                         "FTW_TSS" = round(sum(selected.ftwLocations$FTW_TSS)/2000,1),
                                         "FTW_EIA" = round(sum(selected.ftwLocations$FTW_EIA),1))
     selected.ftwLocations
-
-
+    
+    
   })
-
+  
   ftwtable <- reactive({selected.ftwLocations_tbl <- subset(ftw_simp, SiteID.ftw %in% input$selected.ftw_locations)
   if(input$FTWcover == 0){
     selected.ftwLocations_tbl$FTW_TN <- round(selected.ftwLocations_tbl$ImperviousArea*0.1,1)
@@ -751,7 +910,7 @@ server <- function(input, output, session){
     st_drop_geometry()%>%
     remove_rownames()
   selected.ftwLocations_tbl})
-
+  
   output$mytable.ftw <- renderDataTable({
     selected.ftwLocations_tbl <- subset(ftw_simp, SiteID.ftw %in% input$selected.ftw_locations)
     if(input$FTWcover == 0){
@@ -786,8 +945,8 @@ server <- function(input, output, session){
     datatable(selected.ftwLocations_tbl,colnames = c('Site ID','Pond Surface Area (ac)', 'Owners','Number of Owners','FTW Total N (lbs)', 'FTW Total P (lbs)', 'FTW TSS (tons)', 'FTW EIA (ac)'),
               rownames = FALSE,options = list(searching = FALSE))
   })
-
-
+  
+  
   #========================================================================#
   #========================================================================#
   #========================================================================#
@@ -795,22 +954,22 @@ server <- function(input, output, session){
   #========================================================================#
   #========================================================================#
   #========================================================================#
-
+  
   selected.all <- reactive({
     selectedLocations <- selectedLocations()
     selected.ripLocations <- selected.ripLocations()
     selected.shoreLocations <-selected.shoreLocations()
     selectedLocations.retro<-selectedLocations.retro()
     selected.ftwLocations<-selected.ftwLocations()
-
+    
     selected.all <- data.frame("TN" = sum(selected.ftwLocations$FTW_TN,selectedLocations.retro$TNReduction, selected.ripLocations$LC_TN,  selectedLocations$STRE_TN,selected.shoreLocations$SHST_TN,na.rm = T),
                                "TP" = sum(selected.ftwLocations$FTW_TP,selectedLocations.retro$TPReduction, selected.ripLocations$LC_TP,  selectedLocations$STRE_TP,selected.shoreLocations$SHST_TP,na.rm = T),
                                "TSS" = sum(selected.ftwLocations$FTW_TSS,selectedLocations.retro$TSSReduction, selected.ripLocations$LC_TSS, selectedLocations$STRE_TSS,selected.shoreLocations$SHST_TSS,na.rm = T),
                                "EIA" = sum(selected.ftwLocations$FTW_EIA,selectedLocations.retro$ImperviousRestoration, selected.ripLocations$LC_EIA, selectedLocations$STRE_EIA,selected.shoreLocations$SHST_EIA,na.rm = T))
-
+    
     selected.all
   })
-
+  
   output$mytable.total <- renderDataTable({
     all(is.na(selected.all()$pct))
     validate(
@@ -818,7 +977,7 @@ server <- function(input, output, session){
     )
     datatable(selected.all(),colnames = c('Sum Total N (lbs)', 'Sum Total P (lbs)', 'Sum TSS (tons)', 'Sum EIA (ac)'),rownames = FALSE,options = list(searching = FALSE))
   })
-
+  
   selectedallPlot <- reactive({
     selectedLocations <- selectedLocations()
     selected.ripLocations <- selected.ripLocations()
@@ -836,7 +995,7 @@ server <- function(input, output, session){
       mutate(pct = Unit/sum(Unit)*100)
     selectedallPlot
   })
-
+  
   sumplot <- reactive({
     ggplot(selectedallPlot(), aes(x = 1, y = pct, fill = BMPType)) +
       geom_col(color = "black") +
@@ -858,10 +1017,10 @@ server <- function(input, output, session){
             legend.key.size = unit(1, 'cm'),
             legend.text=element_text(size=12*0.87))
   })
-
-
-
-
+  
+  
+  
+  
   output$plotpie <-renderPlot({
     all(is.na(selectedallPlot()$pct))
     validate(
@@ -887,8 +1046,8 @@ server <- function(input, output, session){
             legend.key.size = unit(1, 'cm'),
             legend.text=element_text(size=12*0.87))
   },  bg="#e6f7ff", execOnResize=T, height = 300*1.25, width = 450*1.25)
-
-
+  
+  
   output$downloadReport <- downloadHandler(
     # name pdf output here
     filename = function() {
@@ -908,7 +1067,7 @@ server <- function(input, output, session){
                      retrotable=selectedLocations.retro(),
                      ftwtable = ftwtable(),
                      streamselections=input$selected_locations)
-
+      
       # Knit the document, passing in the `params` list
       rmarkdown::render(tempReport, output_file = file,
                         params = params,
